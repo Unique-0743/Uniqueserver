@@ -1,4 +1,4 @@
-// server.js (updated: provides /api/music, /proxy and /thumbnail/:fileId)
+// server.js — ready for Vercel deployment
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
@@ -9,7 +9,9 @@ import { Buffer } from "buffer";
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3001;
+
+// ⚠️ Vercel automatically sets PORT=3000 internally
+const PORT = process.env.PORT || 3000;
 
 app.use(
   cors({
@@ -17,10 +19,12 @@ app.use(
       "http://localhost:8081",
       "http://localhost:19006",
       "http://localhost:3000",
+      "https://your-frontend-domain.vercel.app", // ✅ add your app domain here if needed
     ],
     credentials: true,
   })
 );
+
 app.use(express.json());
 
 const oAuth2Client = new google.auth.OAuth2(
@@ -40,16 +44,15 @@ async function refreshAccessTokenIfNeeded() {
   return token;
 }
 
-// Extract thumbnail (reads beginning of file; returns data:<mime>;base64,... or null)
 async function extractThumbnailFromDriveFile(fileId, accessToken) {
   try {
     const res = await fetch(
       `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
       {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        // only fetch the first chunk where ID3 cover is usually located
-        // node-fetch ignores "range" header for some servers but Drive supports partial GET
-        headers: { Authorization: `Bearer ${accessToken}`, Range: "bytes=0-200000" },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Range: "bytes=0-200000",
+        },
       }
     );
 
@@ -73,7 +76,6 @@ async function extractThumbnailFromDriveFile(fileId, accessToken) {
   return null;
 }
 
-// GET /api/music?folderId=...
 app.get("/api/music", async (req, res) => {
   const folderId = req.query.folderId || "1fE94d9OkuR7IzfpjRGe6aRxg2duIgSTQ";
   try {
@@ -98,7 +100,10 @@ app.get("/api/music", async (req, res) => {
     const data = JSON.parse(text);
     const files = data.files || [];
 
-    // Extract thumbnails in parallel (may take extra time)
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : `http://localhost:${PORT}`;
+
     const songsWithThumbs = await Promise.all(
       files.map(async (file) => {
         const thumb = await extractThumbnailFromDriveFile(file.id, accessToken);
@@ -106,8 +111,8 @@ app.get("/api/music", async (req, res) => {
           id: file.id,
           name: file.name,
           mimeType: file.mimeType,
-          thumbnail: thumb, // data:... OR null
-          url: `http://localhost:${PORT}/proxy?fileId=${file.id}`,
+          thumbnail: thumb,
+          url: `${baseUrl}/proxy?fileId=${file.id}`,
         };
       })
     );
@@ -119,7 +124,6 @@ app.get("/api/music", async (req, res) => {
   }
 });
 
-// Proxy streaming endpoint
 app.get("/proxy", async (req, res) => {
   try {
     const { fileId } = req.query;
@@ -143,7 +147,6 @@ app.get("/proxy", async (req, res) => {
       }
     });
 
-    // stream if available
     if (proxied.body && typeof proxied.body.pipe === "function") {
       proxied.body.pipe(res);
     } else {
@@ -156,7 +159,6 @@ app.get("/proxy", async (req, res) => {
   }
 });
 
-// Serve thumbnail as binary (useful for web <Image source={{uri: ...}}>)
 app.get("/thumbnail/:fileId", async (req, res) => {
   try {
     const accessToken = await refreshAccessTokenIfNeeded();
@@ -174,4 +176,8 @@ app.get("/thumbnail/:fileId", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+// ✅ Only listen locally, export for Vercel
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+}
+export default app;
