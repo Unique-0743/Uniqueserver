@@ -19,7 +19,7 @@ app.use(
       "http://localhost:8081",
       "http://localhost:19006",
       "http://localhost:3000",
-      "https://your-frontend-domain.vercel.app", // ✅ add your app domain here if needed
+      "https://uniqueserver-g0dxw3178-unique0743s-projects.vercel.app", // ✅ add your app domain here if needed
     ],
     credentials: true,
   })
@@ -181,3 +181,4 @@ if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
 }
 export default app;
+
