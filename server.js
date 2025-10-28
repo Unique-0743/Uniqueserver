@@ -10,22 +10,25 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ CORS setup including Vercel domain
+// ✅ CORS setup — allow localhost + dynamic origin
 const allowedOrigins = [
   "http://localhost:8081",
   "http://localhost:19006",
   "http://localhost:3000",
-  "https://uniqueserver-ra8w0l2ld-unique0743s-projects.vercel.app",
 ];
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all for dev; tighten in production
+    }
+  },
   credentials: true,
 }));
 
-// ✅ Handle preflight requests globally
 app.options("*", cors());
-
 app.use(express.json());
 
 const oAuth2Client = new google.auth.OAuth2(
@@ -101,7 +104,10 @@ app.get("/api/music", async (req, res) => {
     const data = JSON.parse(text);
     const files = data.files || [];
 
-    const baseUrl = process.env.VERCEL_URL
+    // ✅ Dynamically determine base URL
+    const baseUrl = req.headers.host
+      ? `https://${req.headers.host}`
+      : process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : `http://localhost:${PORT}`;
 
