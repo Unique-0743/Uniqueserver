@@ -1,4 +1,3 @@
-// server.js — ready for Vercel deployment
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
@@ -9,21 +8,23 @@ import { Buffer } from "buffer";
 
 dotenv.config();
 const app = express();
-
-// ⚠️ Vercel automatically sets PORT=3000 internally
 const PORT = process.env.PORT || 3000;
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:8081",
-      "http://localhost:19006",
-      "http://localhost:3000",
-      "https://uniqueserver.vercel.app/", // ✅ add your app domain here if needed
-    ],
-    credentials: true,
-  })
-);
+// ✅ CORS setup including Vercel domain
+const allowedOrigins = [
+  "http://localhost:8081",
+  "http://localhost:19006",
+  "http://localhost:3000",
+  "https://uniqueserver-ra8w0l2ld-unique0743s-projects.vercel.app",
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// ✅ Handle preflight requests globally
+app.options("*", cors());
 
 app.use(express.json());
 
@@ -176,10 +177,8 @@ app.get("/thumbnail/:fileId", async (req, res) => {
   }
 });
 
-// ✅ Only listen locally, export for Vercel
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
 }
+
 export default app;
-
-
