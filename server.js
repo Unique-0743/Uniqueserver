@@ -15,6 +15,8 @@ const allowedOrigins = [
   "http://localhost:8081",
   "http://localhost:19006",
   "http://localhost:3000",
+  "https://uniqueserver.vercel.app"
+,
 ];
 
 app.use(cors({
@@ -188,3 +190,4 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export default app;
+
