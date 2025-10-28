@@ -21,14 +21,15 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || origin.includes("localhost") || origin.endsWith(".vercel.app")) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all for dev; tighten in production
+      callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
 }));
+
 
 app.options("*", cors());
 app.use(express.json());
@@ -190,4 +191,5 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export default app;
+
 
